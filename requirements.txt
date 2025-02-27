@@ -1,0 +1,13 @@
+flask
+pdfplumber
+pdfid
+pytesseract
+pdf2image
+sqlite3
+clamd
+transformers
+torch
+PyMuPDF
+
+
+#pip install pdfplumber pdfid transformers pytesseract pdf2image flask sqlite3 clamd sudo apt-get install clamav tesseract-ocr
