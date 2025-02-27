@@ -4,6 +4,9 @@ from transformers import pipeline  # NLP models
 import pytesseract  # OCR for scanned PDFs
 from pdf2image import convert_from_path  # Convert PDFs to images for OCR
 import re
+import subprocess
+import os
+import pdfid
 
 # === Configuration ===
 VIRUSTOTAL_API_KEY = "your-api-key-here"  # Replace with your VirusTotal API key
@@ -57,6 +60,53 @@ def scan_pdf_for_malware(pdf_path):
         return result.get("data", {}).get("attributes", {}).get("last_analysis_stats", "No scan results")
     except Exception as e:
         return f"⚠️ Error scanning for malware: {e}"
+
+# === Step x: PDFID ===
+
+def detect_suspicious_pdf_elements(pdf_path):
+    """Uses pdfid to detect hidden threats inside the PDF."""
+    print("\n🔍 PDF Structure Analysis (pdfid):")
+
+    # Define the correct path to pdfid.py
+    pdfid_path = "/Users/sudarshan/resume_security_pipeline/pdfid.py"
+
+    # Ensure the script exists
+    if not os.path.exists(pdfid_path):
+        print(f"⚠️ Error: pdfid.py not found at {pdfid_path}. Download it first.")
+        return
+
+    try:
+        # Run pdfid.py using Python
+        result = subprocess.run(["python3", pdfid_path, pdf_path], capture_output=True, text=True)
+
+        if result.returncode != 0:
+            print(f"⚠️ Error running pdfid: {result.stderr}")
+            return
+
+        # Extract suspicious elements
+        suspicious_elements = []
+        output_lines = result.stdout.split("\n")
+        for line in output_lines:
+            if "/JS" in line:
+                suspicious_elements.append("JavaScript execution (/JS)")
+            if "/Launch" in line:
+                suspicious_elements.append("Launch commands (/Launch)")
+            if "/EmbeddedFile" in line:
+                suspicious_elements.append("Embedded files (/EmbeddedFile)")
+            if "/OpenAction" in line:
+                suspicious_elements.append("Auto-execute actions on open (/OpenAction)")
+            if "/AcroForm" in line:
+                suspicious_elements.append("Interactive forms (/AcroForm)")
+
+        if suspicious_elements:
+            print("⚠️ Warning: Suspicious PDF elements detected:")
+            for elem in suspicious_elements:
+                print(f"   - {elem}")
+        else:
+            print("✅ No suspicious PDF structures found.")
+
+    except Exception as e:
+        print(f"⚠️ Error analyzing PDF with pdfid: {e}")
 
 # === Step 3: Scan Text for PII, Bias, Toxicity ===
 def analyze_text(text):
@@ -168,6 +218,7 @@ def run_security_checks(pdf_path):
     print(f"\n🔍 Running security checks on: {pdf_path}\n")
 
     analyze_pdf_metadata(pdf_path)
+    detect_suspicious_pdf_elements(pdf_path)  # ✅ Added pdfid check
     detect_embedded_javascript(pdf_path)
     extract_urls_from_pdf(pdf_path)
     detect_hidden_objects(pdf_path)
@@ -176,15 +227,14 @@ def run_security_checks(pdf_path):
     if ocr_used:
         print("\n🟠 OCR was used to extract text from this document.")
 
-    scan_suspicious_keywords(resume_text)
-
-    malware_scan_result = scan_pdf_for_malware(pdf_path)
-    print("\n✅ Malware Scan Result:", malware_scan_result)
-
     analysis_results = analyze_text(resume_text)
     print("\n🔍 PII Detected:", analysis_results["pii"])
     print("\n🧐 Bias Analysis:", analysis_results["bias"])
     print("\n☢️ Toxicity Analysis:", analysis_results["toxicity"])
+
+    malware_scan_result = scan_pdf_for_malware(pdf_path)
+    print("\n✅ Malware Scan Result:", malware_scan_result)
+
 
 # === Run the Script ===
 run_security_checks(pdf_path)
