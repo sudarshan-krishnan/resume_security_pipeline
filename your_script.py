@@ -1,21 +1,46 @@
 import fitz  # PyMuPDF
 import requests
 from transformers import pipeline
+import pytesseract
+from pdf2image import convert_from_path
+import os
 
 # === Configuration ===
 VIRUSTOTAL_API_KEY = "c0085673951c8e284fccda4e42ef6165e732ba9d0e30848ce1ef19e99d4e8732"  # Get a free API key from virustotal.com
 pdf_path = "/Users/sudarshan/resume_security_pipeline/uploads/Sudarshan_Resume copy.pdf"
 
-# === Step 1: Extract Text from PDF ===
+# === Step 1: Extract Text from PDF, Fallback to OCR if Needed ===
 def extract_text_from_pdf(pdf_path):
-    text = ""
     try:
+        text = ""
         doc = fitz.open(pdf_path)
         for page in doc:
-            text += page.get_text("text") + "\n"
+            page_text = page.get_text("text")
+            if page_text.strip():
+                text += page_text + "\n"
+
+        # If no text was extracted, use OCR
+        if not text.strip():
+            print("⚠️ No text detected, using OCR...")
+            text = extract_text_with_ocr(pdf_path)
+
         return text.strip()
     except Exception as e:
         return f"⚠️ Error extracting text: {e}"
+
+# === Step 2: Use OCR to Extract Text from Scanned PDFs ===
+def extract_text_with_ocr(pdf_path):
+    try:
+        images = convert_from_path(pdf_path)
+        full_text = ""
+
+        for img in images:
+            text = pytesseract.image_to_string(img)
+            full_text += text + "\n"
+
+        return full_text.strip()
+    except Exception as e:
+        return f"⚠️ OCR Error: {e}"
 
 # === Step 2: Scan for Malware with VirusTotal ===
 def scan_pdf_for_malware(pdf_path):
