@@ -10,7 +10,7 @@ import pdfid
 
 # === Configuration ===
 VIRUSTOTAL_API_KEY = "your-api-key-here"  # Replace with your VirusTotal API key
-pdf_path = "/Users/sudarshan/resume_security_pipeline/uploads/Sudarshan_Resume copy.pdf"
+pdf_path = "/Users/sudarshan/resume_security_pipeline/uploads/prepify_sample_resume_2.pdf"
 
 # === Step 1: Extract Text (with OCR fallback for scanned PDFs) ===
 def extract_text_from_pdf(pdf_path):
